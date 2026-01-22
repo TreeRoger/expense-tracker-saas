@@ -3,7 +3,7 @@ import { PrismaClient, Role, TransactionType, RecurrenceFrequency } from "@prism
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Seeding database...");
+  console.log("Seeding database...");
 
   // Create admin user
   const adminUser = await prisma.user.upsert({
@@ -17,7 +17,7 @@ async function main() {
     },
   });
 
-  console.log(`✅ Created admin user: ${adminUser.email}`);
+  console.log(`Created admin user: ${adminUser.email}`);
 
   // Create demo user
   const demoUser = await prisma.user.upsert({
@@ -31,53 +31,53 @@ async function main() {
     },
   });
 
-  console.log(`✅ Created demo user: ${demoUser.email}`);
+  console.log(`Created demo user: ${demoUser.email}`);
 
   // Create categories for demo user
   const categories = await Promise.all([
     prisma.category.upsert({
       where: { name_userId: { name: "Food & Dining", userId: demoUser.id } },
       update: {},
-      create: { name: "Food & Dining", color: "#ef4444", icon: "🍔", userId: demoUser.id },
+      create: { name: "Food & Dining", color: "#ef4444", icon: "", userId: demoUser.id },
     }),
     prisma.category.upsert({
       where: { name_userId: { name: "Transportation", userId: demoUser.id } },
       update: {},
-      create: { name: "Transportation", color: "#f97316", icon: "🚗", userId: demoUser.id },
+      create: { name: "Transportation", color: "#f97316", icon: "", userId: demoUser.id },
     }),
     prisma.category.upsert({
       where: { name_userId: { name: "Shopping", userId: demoUser.id } },
       update: {},
-      create: { name: "Shopping", color: "#eab308", icon: "🛒", userId: demoUser.id },
+      create: { name: "Shopping", color: "#eab308", icon: "", userId: demoUser.id },
     }),
     prisma.category.upsert({
       where: { name_userId: { name: "Entertainment", userId: demoUser.id } },
       update: {},
-      create: { name: "Entertainment", color: "#22c55e", icon: "🎬", userId: demoUser.id },
+      create: { name: "Entertainment", color: "#22c55e", icon: "", userId: demoUser.id },
     }),
     prisma.category.upsert({
       where: { name_userId: { name: "Bills & Utilities", userId: demoUser.id } },
       update: {},
-      create: { name: "Bills & Utilities", color: "#3b82f6", icon: "💡", userId: demoUser.id },
+      create: { name: "Bills & Utilities", color: "#3b82f6", icon: "", userId: demoUser.id },
     }),
     prisma.category.upsert({
       where: { name_userId: { name: "Health", userId: demoUser.id } },
       update: {},
-      create: { name: "Health", color: "#ec4899", icon: "🏥", userId: demoUser.id },
+      create: { name: "Health", color: "#ec4899", icon: "", userId: demoUser.id },
     }),
     prisma.category.upsert({
       where: { name_userId: { name: "Salary", userId: demoUser.id } },
       update: {},
-      create: { name: "Salary", color: "#10b981", icon: "💰", userId: demoUser.id },
+      create: { name: "Salary", color: "#10b981", icon: "", userId: demoUser.id },
     }),
     prisma.category.upsert({
       where: { name_userId: { name: "Freelance", userId: demoUser.id } },
       update: {},
-      create: { name: "Freelance", color: "#6366f1", icon: "💵", userId: demoUser.id },
+      create: { name: "Freelance", color: "#6366f1", icon: "", userId: demoUser.id },
     }),
   ]);
 
-  console.log(`✅ Created ${categories.length} categories`);
+  console.log(`Created ${categories.length} categories`);
 
   const [food, transport, shopping, entertainment, bills, health, salary, freelance] = categories;
 
@@ -180,7 +180,7 @@ async function main() {
     }),
   ]);
 
-  console.log(`✅ Created ${transactions.length} sample transactions`);
+  console.log(`Created ${transactions.length} sample transactions`);
 
   // Create budgets
   const budgets = await Promise.all([
@@ -262,7 +262,7 @@ async function main() {
     }),
   ]);
 
-  console.log(`✅ Created ${budgets.length} budgets`);
+  console.log(`Created ${budgets.length} budgets`);
 
   // Create recurring transactions
   const recurrences = await Promise.all([
@@ -307,20 +307,20 @@ async function main() {
     }),
   ]);
 
-  console.log(`✅ Created ${recurrences.length} recurring transactions`);
+  console.log(`Created ${recurrences.length} recurring transactions`);
 
-  console.log("\n🎉 Database seeded successfully!");
-  console.log("\n📋 Demo credentials:");
+  console.log("\nDatabase seeded successfully!");
+  console.log("\nDemo credentials:");
   console.log("   Email: demo@example.com");
   console.log("   Password: demo1234");
-  console.log("\n📋 Admin credentials:");
+  console.log("\nAdmin credentials:");
   console.log("   Email: admin@example.com");
   console.log("   Password: admin123");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seeding failed:", e);
+    console.error("Seeding failed:", e);
     process.exit(1);
   })
   .finally(async () => {

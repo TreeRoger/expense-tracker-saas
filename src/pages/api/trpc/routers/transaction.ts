@@ -1,10 +1,14 @@
+/**
+ * Transaction Router - handles CRUD operations, budget tracking, and analytics.
+ * Uses ACID transactions to keep budgets in sync.
+ */
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { TransactionType, Prisma } from "@prisma/client";
 
 export const transactionRouter = router({
-  // List transactions with filters and pagination
+  // List transactions with filtering and pagination
   list: protectedProcedure
     .input(
       z.object({
@@ -57,7 +61,7 @@ export const transactionRouter = router({
       };
     }),
 
-  // Get a single transaction
+  // Get single transaction by ID
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -76,7 +80,7 @@ export const transactionRouter = router({
       return transaction;
     }),
 
-  // Create a transaction with budget update (ACID transaction)
+  // Create transaction and update budget if expense (ACID transaction)
   create: protectedProcedure
     .input(
       z.object({
@@ -100,7 +104,7 @@ export const transactionRouter = router({
         });
       }
 
-      // ACID transaction: create transaction and update budget spent
+      // ACID transaction - both operations succeed or both fail
       return ctx.prisma.$transaction(async (tx) => {
         const transaction = await tx.transaction.create({
           data: {
@@ -114,7 +118,7 @@ export const transactionRouter = router({
           include: { category: true },
         });
 
-        // Update budget spent if this is an expense
+        // Update budget spent if expense (JS months are 0-indexed)
         if (input.type === TransactionType.EXPENSE) {
           const month = input.date.getMonth() + 1;
           const year = input.date.getFullYear();
@@ -136,7 +140,7 @@ export const transactionRouter = router({
       });
     }),
 
-  // Update a transaction with budget adjustment (ACID transaction)
+  // Update transaction and adjust budgets accordingly
   update: protectedProcedure
     .input(
       z.object({
@@ -172,12 +176,11 @@ export const transactionRouter = router({
         }
       }
 
-      // ACID transaction: update transaction and adjust budgets
       return ctx.prisma.$transaction(async (tx) => {
         const oldMonth = existing.date.getMonth() + 1;
         const oldYear = existing.date.getFullYear();
 
-        // Revert old budget spent if was expense
+        // Revert old budget impact
         if (existing.type === TransactionType.EXPENSE) {
           await tx.budget.updateMany({
             where: {
@@ -204,7 +207,7 @@ export const transactionRouter = router({
           include: { category: true },
         });
 
-        // Apply new budget spent if expense
+        // Apply new budget impact
         const newType = input.type ?? existing.type;
         if (newType === TransactionType.EXPENSE) {
           const newDate = input.date ?? existing.date;
@@ -229,7 +232,7 @@ export const transactionRouter = router({
       });
     }),
 
-  // Delete a transaction with budget adjustment (ACID transaction)
+  // Delete transaction and revert budget impact
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -245,7 +248,7 @@ export const transactionRouter = router({
       }
 
       return ctx.prisma.$transaction(async (tx) => {
-        // Revert budget spent if was expense
+        // Revert budget impact
         if (transaction.type === TransactionType.EXPENSE) {
           const month = transaction.date.getMonth() + 1;
           const year = transaction.date.getFullYear();
@@ -269,7 +272,7 @@ export const transactionRouter = router({
       });
     }),
 
-  // Get summary statistics
+  // Get financial summary for date range
   getSummary: protectedProcedure
     .input(
       z.object({
@@ -306,7 +309,7 @@ export const transactionRouter = router({
         }),
       ]);
 
-      // Get category details for the grouped results
+      // Fetch category details for the summary
       const categoryIds = byCategory.map((c) => c.categoryId);
       const categories = await ctx.prisma.category.findMany({
         where: { id: { in: categoryIds } },

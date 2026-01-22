@@ -1,9 +1,23 @@
+/**
+ * Recurrence Router
+ * 
+ * Handles recurring transactions (subscriptions, bills, salary, etc.):
+ * - Create/update/delete recurring patterns
+ * - Process due recurrences (creates transactions automatically)
+ * - Calculate next due dates based on frequency
+ * - Automatic budget updates when processing expenses
+ */
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { RecurrenceFrequency, TransactionType, Prisma } from "@prisma/client";
 
-// Helper to calculate next due date
+/**
+ * Calculate Next Due Date
+ * 
+ * Calculates the next due date based on the current date and frequency.
+ * Handles all recurrence frequencies (daily, weekly, monthly, etc.).
+ */
 function calculateNextDueDate(
   currentDate: Date,
   frequency: RecurrenceFrequency
@@ -216,7 +230,18 @@ export const recurrenceRouter = router({
       });
     }),
 
-  // Process due recurrences - creates transactions for due items
+  /**
+   * Process Due Recurrences
+   * 
+   * Finds all active recurrences that are due and:
+   * 1. Creates transaction records for each due recurrence
+   * 2. Updates budget.spent if it's an expense
+   * 3. Calculates and updates nextDueDate
+   * 4. Deactivates recurrences that have reached their endDate
+   * 
+   * This should be called periodically (e.g., daily cron job) to process
+   * recurring transactions automatically.
+   */
   processDue: protectedProcedure.mutation(async ({ ctx }) => {
     const now = new Date();
 
@@ -269,13 +294,13 @@ export const recurrenceRouter = router({
           });
         }
 
-        // Calculate and update next due date
+        // Calculate next due date based on frequency
         const nextDueDate = calculateNextDueDate(
           recurrence.nextDueDate,
           recurrence.frequency
         );
 
-        // Check if recurrence should be deactivated
+        // Check if recurrence should be deactivated (reached end date)
         const shouldDeactivate =
           recurrence.endDate && nextDueDate > recurrence.endDate;
 
@@ -303,7 +328,12 @@ export const recurrenceRouter = router({
     };
   }),
 
-  // Get upcoming recurrences
+  /**
+   * Get Upcoming Recurrences
+   * 
+   * Returns active recurrences that are due within the specified number of days.
+   * Useful for displaying upcoming bills/subscriptions on the dashboard.
+   */
   getUpcoming: protectedProcedure
     .input(
       z.object({

@@ -1,14 +1,19 @@
+/**
+ * tRPC Context - creates context for each request with Prisma client and user session.
+ * Note: Using header-based auth for demo. In production, use JWT tokens.
+ */
 import { prisma } from "../../../server/db";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 import type { User } from "@prisma/client";
 
+// Session interface - user info without sensitive data
 export interface Session {
   user: Pick<User, "id" | "email" | "name" | "role">;
 }
 
+// Creates context for each request - gets user from headers
 export async function createContext(opts: CreateNextContextOptions) {
-  // In production, extract session from JWT/cookie
-  // For now, we'll get user from a header (demo purposes)
+  // Get user ID from header (in production, would use JWT/cookie)
   const userId = opts.req.headers["x-user-id"] as string | undefined;
 
   let session: Session | null = null;
@@ -29,4 +34,5 @@ export async function createContext(opts: CreateNextContextOptions) {
   };
 }
 
+// Type export for use in tRPC procedures
 export type Context = Awaited<ReturnType<typeof createContext>>;

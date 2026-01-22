@@ -1,10 +1,24 @@
+/**
+ * Budget Router
+ * 
+ * Handles monthly budget management:
+ * - Create/update/delete budgets per category per month
+ * - Automatic spent calculation from transactions
+ * - Copy budgets from previous months
+ * - Recalculate spent amounts for data integrity
+ */
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { Prisma, TransactionType } from "@prisma/client";
 
 export const budgetRouter = router({
-  // List budgets for a specific month/year
+  /**
+   * List Budgets for Month/Year
+   * 
+   * Retrieves all budgets for a specific month and year.
+   * Calculates totals, remaining amounts, and percentage used.
+   */
   list: protectedProcedure
     .input(
       z.object({
@@ -23,7 +37,7 @@ export const budgetRouter = router({
         orderBy: { category: { name: "asc" } },
       });
 
-      // Calculate total budgeted and spent
+      // Calculate aggregate totals across all budgets for the month
       const totals = budgets.reduce(
         (acc, budget) => ({
           totalBudgeted: acc.totalBudgeted + budget.amount.toNumber(),
@@ -48,7 +62,13 @@ export const budgetRouter = router({
       };
     }),
 
-  // Get or create a budget for a category/month/year
+  /**
+   * Get or Create Budget
+   * 
+   * Upserts a budget for a category/month/year combination.
+   * Automatically calculates current spent amount from transactions.
+   * Useful for creating budgets that reflect actual spending.
+   */
   getOrCreate: protectedProcedure
     .input(
       z.object({
@@ -71,9 +91,10 @@ export const budgetRouter = router({
         });
       }
 
-      // Calculate current spent amount for this category/month
-      const startDate = new Date(input.year, input.month - 1, 1);
-      const endDate = new Date(input.year, input.month, 0, 23, 59, 59);
+      // Calculate current spent amount from actual transactions for this category/month
+      // This ensures budget.spent reflects real spending, not just manual updates
+      const startDate = new Date(input.year, input.month - 1, 1);  // First day of month
+      const endDate = new Date(input.year, input.month, 0, 23, 59, 59);  // Last day of month
 
       const spentResult = await ctx.prisma.transaction.aggregate({
         where: {
@@ -174,7 +195,13 @@ export const budgetRouter = router({
       });
     }),
 
-  // Copy budgets from previous month
+  /**
+   * Copy Budgets from Previous Month
+   * 
+   * Convenience feature to copy all budgets from the previous month
+   * to the target month. Useful for setting up monthly budgets quickly.
+   * Skips categories that already have budgets in the target month.
+   */
   copyFromPreviousMonth: protectedProcedure
     .input(
       z.object({
@@ -236,7 +263,14 @@ export const budgetRouter = router({
       return results;
     }),
 
-  // Recalculate spent amounts for a month (useful for data integrity)
+  /**
+   * Recalculate Spent Amounts
+   * 
+   * Recalculates budget.spent values from actual transactions.
+   * Useful for data integrity checks or fixing inconsistencies.
+   * 
+   * This is a maintenance operation that ensures budgets match reality.
+   */
   recalculateSpent: protectedProcedure
     .input(
       z.object({

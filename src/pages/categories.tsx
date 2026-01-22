@@ -11,8 +11,8 @@ const colorOptions = [
 ];
 
 const iconOptions = [
-  "🍔", "🚗", "🛒", "🎬", "💡", "🏥", "💰", "💵", "🏠", "✈️",
-  "📱", "👗", "🎮", "📚", "🐕", "🌿", "💳", "🎁", "☕", "🏋️",
+  "", "", "", "", "", "", "", "", "", "",
+  "", "", "", "", "", "", "", "", "", "",
 ];
 
 interface CategoryModalProps {
@@ -258,7 +258,7 @@ export default function Categories() {
         </div>
       ) : categories?.length === 0 ? (
         <div className="card text-center text-muted" style={{ padding: "60px 24px" }}>
-          <p style={{ fontSize: "3rem", marginBottom: 16 }}>🏷️</p>
+          <p style={{ fontSize: "3rem", marginBottom: 16 }}></p>
           <p>No categories yet</p>
           <button
             className="btn btn-primary mt-4"
@@ -312,7 +312,7 @@ export default function Categories() {
                     setModalOpen(true);
                   }}
                 >
-                  ✏️ Edit
+                  Edit
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -326,7 +326,7 @@ export default function Categories() {
                     }
                   }}
                 >
-                  🗑️ Delete
+                  Delete
                 </button>
               </div>
               <div

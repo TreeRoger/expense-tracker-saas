@@ -1,19 +1,24 @@
+/**
+ * User Router - handles authentication, registration, and user management.
+ * Note: Password hashing is simplified for demo. Use bcrypt in production.
+ */
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure, adminProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { Role } from "@prisma/client";
 
-// In production, use bcrypt or argon2
+// Password hashing - simplified for demo. Use bcrypt in production.
 const hashPassword = (password: string) => {
   return Buffer.from(password).toString("base64");
 };
 
+// Password verification - simplified for demo. Use bcrypt.compare() in production.
 const verifyPassword = (password: string, hash: string) => {
   return Buffer.from(password).toString("base64") === hash;
 };
 
 export const userRouter = router({
-  // Register a new user
+  // Register new user and create default categories
   register: publicProcedure
     .input(
       z.object({
@@ -43,24 +48,24 @@ export const userRouter = router({
         select: { id: true, email: true, name: true, role: true },
       });
 
-      // Create default categories for the user
+      // Set up default categories for better onboarding
       await ctx.prisma.category.createMany({
         data: [
-          { name: "Food & Dining", color: "#ef4444", icon: "🍔", userId: user.id },
-          { name: "Transportation", color: "#f97316", icon: "🚗", userId: user.id },
-          { name: "Shopping", color: "#eab308", icon: "🛒", userId: user.id },
-          { name: "Entertainment", color: "#22c55e", icon: "🎬", userId: user.id },
-          { name: "Bills & Utilities", color: "#3b82f6", icon: "💡", userId: user.id },
-          { name: "Health", color: "#ec4899", icon: "🏥", userId: user.id },
-          { name: "Salary", color: "#10b981", icon: "💰", userId: user.id },
-          { name: "Other Income", color: "#6366f1", icon: "💵", userId: user.id },
+          { name: "Food & Dining", color: "#ef4444", icon: "", userId: user.id },
+          { name: "Transportation", color: "#f97316", icon: "", userId: user.id },
+          { name: "Shopping", color: "#eab308", icon: "", userId: user.id },
+          { name: "Entertainment", color: "#22c55e", icon: "", userId: user.id },
+          { name: "Bills & Utilities", color: "#3b82f6", icon: "", userId: user.id },
+          { name: "Health", color: "#ec4899", icon: "", userId: user.id },
+          { name: "Salary", color: "#10b981", icon: "", userId: user.id },
+          { name: "Other Income", color: "#6366f1", icon: "", userId: user.id },
         ],
       });
 
       return user;
     }),
 
-  // Login
+  // Login - validates credentials. In production, return JWT token.
   login: publicProcedure
     .input(
       z.object({
@@ -80,7 +85,6 @@ export const userRouter = router({
         });
       }
 
-      // In production, return a JWT token
       return {
         user: {
           id: user.id,
@@ -91,7 +95,7 @@ export const userRouter = router({
       };
     }),
 
-  // Get current user profile
+  // Get current user profile with stats
   me: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.prisma.user.findUnique({
       where: { id: ctx.session.user.id },
@@ -113,7 +117,7 @@ export const userRouter = router({
     return user;
   }),
 
-  // Update profile
+  // Update user profile - checks email uniqueness
   updateProfile: protectedProcedure
     .input(
       z.object({
@@ -122,6 +126,7 @@ export const userRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Check email isn't taken by another user
       if (input.email) {
         const existing = await ctx.prisma.user.findFirst({
           where: {
@@ -144,7 +149,7 @@ export const userRouter = router({
       });
     }),
 
-  // Admin: List all users
+  // Admin: List all users with pagination
   listAll: adminProcedure
     .input(
       z.object({

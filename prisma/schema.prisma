@@ -1,18 +1,42 @@
-// prisma/schema.prisma
+/**
+ * Prisma Database Schema
+ * 
+ * This file defines the complete data model for the Expense Tracker SaaS application.
+ * It uses PostgreSQL as the database and Prisma ORM for type-safe database access.
+ * 
+ * Key Features:
+ * - Multi-user support with role-based access control (Admin/User)
+ * - Transaction tracking with categories
+ * - Monthly budget management per category
+ * - Recurring transaction support (subscriptions, bills, etc.)
+ * - Cascade deletes for data integrity
+ */
+
+// Prisma Client Generator Configuration
 generator client {
   provider = "prisma-client-js"
 }
 
+// Database Connection Configuration
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+/**
+ * User Roles
+ * - ADMIN: Full system access, can manage all users
+ * - USER: Standard user with access to their own data only
+ */
 enum Role {
   ADMIN
   USER
 }
 
+/**
+ * Recurrence Frequencies
+ * Defines how often a recurring transaction should occur
+ */
 enum RecurrenceFrequency {
   DAILY
   WEEKLY
@@ -22,103 +46,185 @@ enum RecurrenceFrequency {
   YEARLY
 }
 
+/**
+ * Transaction Types
+ * - INCOME: Money coming in (salary, bonuses, etc.)
+ * - EXPENSE: Money going out (purchases, bills, etc.)
+ */
 enum TransactionType {
   INCOME
   EXPENSE
 }
 
+/**
+ * User Model
+ * 
+ * Represents a user account in the system. Each user has their own:
+ * - Transactions (income and expenses)
+ * - Budgets (monthly spending limits per category)
+ * - Recurring transactions (subscriptions, bills)
+ * - Custom categories
+ * 
+ * Security: Password is stored as a hash (in production, use bcrypt/argon2)
+ */
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id           String   @id @default(cuid())  // Unique identifier (CUID format)
+  email        String   @unique               // User's email (unique constraint)
+  name         String?                        // Optional display name
+  passwordHash String                         // Hashed password (not plain text)
+  role         Role     @default(USER)        // User role (ADMIN or USER)
+  createdAt    DateTime @default(now())      // Account creation timestamp
+  updatedAt    DateTime @updatedAt            // Last update timestamp
 
+  // Relations - cascade delete ensures user data is cleaned up
   transactions Transaction[]
   budgets      Budget[]
   recurrences  Recurrence[]
   categories   Category[]
 }
 
+/**
+ * Category Model
+ * 
+ * Custom categories for organizing transactions. Each user can create their own
+ * categories with custom colors and icons for better visual organization.
+ * 
+ * Constraints:
+ * - Category names must be unique per user (composite unique constraint)
+ * - Categories cannot be deleted if they have associated transactions
+ */
 model Category {
-  id        String   @id @default(cuid())
-  name      String
-  color     String   @default("#6366f1")
-  icon      String?
-  userId    String
-  createdAt DateTime @default(now())
+  id        String   @id @default(cuid())     // Unique identifier
+  name      String                            // Category name (e.g., "Food & Dining")
+  color     String   @default("#6366f1")     // Hex color for UI display
+  icon      String?                           // Optional emoji/icon
+  userId    String                            // Owner of this category
+  createdAt DateTime @default(now())          // Creation timestamp
 
+  // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  budgets      Budget[]
-  recurrences  Recurrence[]
+  transactions Transaction[] // All transactions in this category
+  budgets      Budget[]       // Budgets set for this category
+  recurrences  Recurrence[]   // Recurring transactions in this category
 
+  // Constraints: Category name must be unique per user
   @@unique([name, userId])
-  @@index([userId])
+  @@index([userId])  // Index for faster user-based queries
 }
 
+/**
+ * Transaction Model
+ * 
+ * Represents a single financial transaction (income or expense).
+ * 
+ * Key Features:
+ * - Decimal precision (12,2) for accurate financial calculations
+ * - Optional link to recurring transaction source
+ * - Automatic budget tracking when expense is created
+ * 
+ * Business Logic:
+ * - When an expense is created, the corresponding budget's "spent" field is incremented
+ * - Transactions can be linked to recurring patterns (subscriptions, bills)
+ */
 model Transaction {
-  id          String          @id @default(cuid())
-  userId      String
-  categoryId  String
-  amount      Decimal         @db.Decimal(12, 2)
-  type        TransactionType
-  description String?
-  date        DateTime
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id          String          @id @default(cuid())  // Unique identifier
+  userId      String                                 // Owner of this transaction
+  categoryId  String                                 // Category this transaction belongs to
+  amount      Decimal         @db.Decimal(12, 2)    // Amount (supports up to 999,999,999,999.99)
+  type        TransactionType                        // INCOME or EXPENSE
+  description String?                                // Optional transaction description
+  date        DateTime                               // When the transaction occurred
+  createdAt   DateTime        @default(now())        // Record creation timestamp
+  updatedAt   DateTime        @updatedAt             // Last update timestamp
 
+  // Relations
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   category    Category    @relation(fields: [categoryId], references: [id])
-  recurrence  Recurrence? @relation(fields: [recurrenceId], references: [id])
-  recurrenceId String?
+  recurrence  Recurrence? @relation(fields: [recurrenceId], references: [id])  // Optional: if created from recurring pattern
+  recurrenceId String?                                                         // Foreign key to recurrence
 
-  @@index([userId])
-  @@index([categoryId])
-  @@index([date])
+  // Indexes for optimized queries
+  @@index([userId])      // Fast user-based queries
+  @@index([categoryId])  // Fast category filtering
+  @@index([date])        // Fast date range queries
 }
 
+/**
+ * Budget Model
+ * 
+ * Monthly budget limits per category. Tracks how much a user plans to spend
+ * in a specific category for a given month/year.
+ * 
+ * Key Features:
+ * - One budget per category per month (enforced by unique constraint)
+ * - "spent" field automatically updated when expenses are created
+ * - Supports budget vs actual spending analysis
+ * 
+ * Business Logic:
+ * - When an expense transaction is created, the corresponding budget's
+ *   "spent" field is automatically incremented (handled in transaction router)
+ * - Budgets can be copied from previous months for convenience
+ */
 model Budget {
-  id         String   @id @default(cuid())
-  userId     String
-  categoryId String
-  amount     Decimal  @db.Decimal(12, 2)
-  spent      Decimal  @default(0) @db.Decimal(12, 2)
-  month      Int      // 1-12
-  year       Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id         String   @id @default(cuid())  // Unique identifier
+  userId     String                          // Owner of this budget
+  categoryId String                          // Category this budget applies to
+  amount     Decimal  @db.Decimal(12, 2)    // Budget limit (planned spending)
+  spent      Decimal  @default(0) @db.Decimal(12, 2)  // Actual amount spent (auto-updated)
+  month      Int      // Month (1-12)
+  year       Int      // Year (e.g., 2024)
+  createdAt  DateTime @default(now())       // Creation timestamp
+  updatedAt  DateTime @updatedAt            // Last update timestamp
 
+  // Relations
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id])
 
+  // Constraints: One budget per user/category/month/year combination
   @@unique([userId, categoryId, month, year])
-  @@index([userId])
-  @@index([month, year])
+  @@index([userId])        // Fast user-based queries
+  @@index([month, year])   // Fast month/year filtering
 }
 
+/**
+ * Recurrence Model
+ * 
+ * Defines recurring transactions (subscriptions, bills, salary, etc.).
+ * Automatically creates transaction records when due dates are reached.
+ * 
+ * Key Features:
+ * - Supports multiple frequencies (daily, weekly, monthly, etc.)
+ * - Optional end date for time-limited subscriptions
+ * - Tracks next due date for efficient querying
+ * - Can be activated/deactivated without deletion
+ * 
+ * Business Logic:
+ * - When processed, creates a transaction and updates nextDueDate
+ * - Automatically deactivates when endDate is reached
+ * - Updates budget "spent" when expense recurrences are processed
+ */
 model Recurrence {
-  id          String              @id @default(cuid())
-  userId      String
-  categoryId  String
-  amount      Decimal             @db.Decimal(12, 2)
-  type        TransactionType
-  description String?
-  frequency   RecurrenceFrequency
-  startDate   DateTime
-  endDate     DateTime?
-  nextDueDate DateTime
-  isActive    Boolean             @default(true)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id          String              @id @default(cuid())  // Unique identifier
+  userId      String                                     // Owner of this recurrence
+  categoryId  String                                     // Category for generated transactions
+  amount      Decimal             @db.Decimal(12, 2)    // Amount for each occurrence
+  type        TransactionType                            // INCOME or EXPENSE
+  description String?                                    // Optional description
+  frequency   RecurrenceFrequency                        // How often it occurs
+  startDate   DateTime                                   // When recurrence starts
+  endDate     DateTime?                                  // Optional: when recurrence ends
+  nextDueDate DateTime                                   // Next date this should be processed
+  isActive    Boolean             @default(true)        // Can be toggled on/off
+  createdAt   DateTime            @default(now())        // Creation timestamp
+  updatedAt   DateTime            @updatedAt             // Last update timestamp
 
+  // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   category     Category      @relation(fields: [categoryId], references: [id])
-  transactions Transaction[]
+  transactions Transaction[] // All transactions created from this recurrence
 
-  @@index([userId])
-  @@index([nextDueDate])
-  @@index([isActive])
+  // Indexes for efficient queries
+  @@index([userId])        // Fast user-based queries
+  @@index([nextDueDate])   // Fast queries for due recurrences
+  @@index([isActive])      // Fast filtering of active recurrences
 }

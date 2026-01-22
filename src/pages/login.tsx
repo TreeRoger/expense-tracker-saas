@@ -63,7 +63,7 @@ export default function Login() {
               fontSize: "2rem",
             }}
           >
-            💰
+            $
           </div>
           <h1 style={{ fontSize: "1.75rem", marginBottom: 8 }}>ExpenseTracker</h1>
           <p className="text-secondary">

@@ -382,7 +382,7 @@ export default function Recurrences() {
         </div>
       ) : recurrences?.length === 0 ? (
         <div className="card text-center text-muted" style={{ padding: "60px 24px" }}>
-          <p style={{ fontSize: "3rem", marginBottom: 16 }}>🔄</p>
+          <p style={{ fontSize: "3rem", marginBottom: 16 }}></p>
           <p>No recurring transactions set up</p>
           <button
             className="btn btn-primary mt-4"
@@ -481,7 +481,7 @@ export default function Recurrences() {
                         setModalOpen(true);
                       }}
                     >
-                      ✏️
+                      Edit
                     </button>
                     {rec.isActive && (
                       <button
@@ -492,7 +492,7 @@ export default function Recurrences() {
                           }
                         }}
                       >
-                        ⏸️
+                        Pause
                       </button>
                     )}
                     {!rec.isActive && (
@@ -502,7 +502,7 @@ export default function Recurrences() {
                           updateMutation.mutate({ id: rec.id, isActive: true });
                         }}
                       >
-                        ▶️
+                        Resume
                       </button>
                     )}
                     <button
@@ -513,7 +513,7 @@ export default function Recurrences() {
                         }
                       }}
                     >
-                      🗑️
+                      Delete
                     </button>
                   </div>
                 </div>

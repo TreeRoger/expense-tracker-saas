@@ -304,7 +304,7 @@ export default function Budgets() {
                           }
                         }}
                       >
-                        ✏️
+                        Edit
                       </button>
                       <button
                         className="btn btn-ghost btn-sm"
@@ -314,7 +314,7 @@ export default function Budgets() {
                           }
                         }}
                       >
-                        🗑️
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -345,7 +345,7 @@ export default function Budgets() {
                             : "var(--accent-warning)",
                       }}
                     >
-                      {budget.percentUsed > 100 ? "⚠️ Over budget!" : "⚠️ Almost at limit"}
+                      {budget.percentUsed > 100 ? "Over budget!" : "Almost at limit"}
                     </span>
                   )}
                 </div>
@@ -363,7 +363,7 @@ export default function Budgets() {
             onClick={() => recalculateMutation.mutate({ month, year })}
             disabled={recalculateMutation.isLoading}
           >
-            🔄 Recalculate Spent Amounts
+            Recalculate Spent Amounts
           </button>
         </div>
       )}

@@ -1,8 +1,23 @@
+/**
+ * Dashboard Page
+ * 
+ * Main dashboard displaying:
+ * - Financial summary (income, expenses, net savings)
+ * - Budget overview with progress indicators
+ * - Recent transactions
+ * - Upcoming recurring expenses
+ * - Spending breakdown by category
+ * 
+ * All data is fetched using tRPC with React Query for automatic caching and refetching.
+ */
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Layout from "../components/Layout";
 import { trpc } from "../utils/trpc";
 
+/**
+ * Format number as USD currency
+ */
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -10,6 +25,9 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/**
+ * Format date as short string (e.g., "Jan 15")
+ */
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",

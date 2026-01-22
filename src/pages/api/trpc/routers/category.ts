@@ -1,9 +1,21 @@
+/**
+ * Category Router
+ * 
+ * Handles category management:
+ * - CRUD operations for custom categories
+ * - Category validation (unique names per user)
+ * - Prevents deletion of categories with transactions
+ */
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 
 export const categoryRouter = router({
-  // List user's categories
+  /**
+   * List User's Categories
+   * 
+   * Returns all categories for the current user with transaction counts.
+   */
   list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.category.findMany({
       where: { userId: ctx.session.user.id },
@@ -16,7 +28,12 @@ export const categoryRouter = router({
     });
   }),
 
-  // Create a new category
+  /**
+   * Create Category
+   * 
+   * Creates a new category with custom name, color, and optional icon.
+   * Validates that category name is unique per user.
+   */
   create: protectedProcedure
     .input(
       z.object({
@@ -112,6 +129,8 @@ export const categoryRouter = router({
         });
       }
 
+      // Prevent deletion of categories with existing transactions
+      // This maintains data integrity and prevents orphaned transactions
       if (category._count.transactions > 0) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",

@@ -351,7 +351,7 @@ export default function Transactions() {
           </div>
         ) : data?.transactions.length === 0 ? (
           <div className="text-center text-muted" style={{ padding: "60px 24px" }}>
-            <p style={{ fontSize: "3rem", marginBottom: 16 }}>💳</p>
+            <p style={{ fontSize: "3rem", marginBottom: 16 }}></p>
             <p>No transactions found</p>
             <button
               className="btn btn-primary mt-4"
@@ -424,7 +424,7 @@ export default function Transactions() {
                               setModalOpen(true);
                             }}
                           >
-                            ✏️
+                            Edit
                           </button>
                           <button
                             className="btn btn-ghost btn-sm"
@@ -434,7 +434,7 @@ export default function Transactions() {
                               }
                             }}
                           >
-                            🗑️
+                            Delete
                           </button>
                         </div>
                       </td>
